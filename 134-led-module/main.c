@@ -1,0 +1,63 @@
+#include "pico/stdlib.h"
+#include "hardware/gpio.h"
+#include <stdio.h>
+#include "led.h"
+
+const uint BUTTON_PIN = 24;
+const uint DEBOUNCE_MS = 20;
+
+void handle_command(int command)
+{
+    if (command == 'e')
+    {
+        led_set(true);
+    }
+    else if (command == 'd')
+    {
+        led_set(false);
+    }
+    else
+    {
+        printf("unknown command: %c\n", command);
+    }
+}
+
+bool get_button_debounce(uint pin)
+{
+    bool state = gpio_get(pin);
+    sleep_ms(DEBOUNCE_MS);
+    return state && gpio_get(pin);
+}
+
+int main()
+{
+    led_init();
+
+    gpio_init(BUTTON_PIN);
+    gpio_set_dir(BUTTON_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_PIN);
+    stdio_init_all();
+
+    bool previous = false;
+
+    while (1)
+    {
+        bool current = get_button_debounce(BUTTON_PIN);
+        
+        if (previous == true && current == false)
+        {
+            led_toggle();
+        }
+
+        previous = current;
+        int command = getchar_timeout_us(0);
+
+        if (command == PICO_ERROR_TIMEOUT)
+        {
+            continue;
+        }
+
+        handle_command(command);
+    }
+    return 0;
+}
